@@ -1,4 +1,4 @@
-# 🤖 IvyLineBot
+# 🤖 FlyPig LineBot
 
 這是一個基於 Flask 和 OpenAI 的 LINE 聊天機器人專案，可以處理自然語言查詢並提供智能回覆。
 
