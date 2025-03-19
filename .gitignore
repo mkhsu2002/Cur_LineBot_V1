@@ -1,10 +1,65 @@
-# Byte-compiled / optimized / DLL files
+# Python
 __pycache__/
 *.py[cod]
 *$py.class
-
-# C extensions
 *.so
+.Python
+env/
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# 虛擬環境
+venv/
+ENV/
+env/
+
+# 環境變數和敏感信息
+.env
+*.pem
+*.key
+
+# 資料庫
+*.db
+*.sqlite
+*.sqlite3
+instance/
+
+# 日誌
+*.log
+logs/
+
+# 系統檔案
+.DS_Store
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# 其他
+.coverage
+htmlcov/
+.pytest_cache/
+.cache
+nosetests.xml
+coverage.xml
+*.cover
+.hypothesis/
+
+# 向量索引和模型檔案
+knowledge_base/*
+!knowledge_base/.gitkeep
 
 # Distribution / packaging
 .Python
@@ -93,15 +148,6 @@ celerybeat.pid
 # SageMath parsed files
 *.sage.py
 
-# Environments
-.env
-.venv
-env/
-venv/
-ENV/
-env.bak/
-venv.bak/
-
 # Spyder project settings
 .spyderproject
 .spyproject
@@ -126,18 +172,5 @@ dmypy.json
 # Cython debug symbols
 cython_debug/
 
-# Knowledge base index files
-knowledge_base/
-
-# Database files
-*.db
-
-# IDE specific files
-.idea/
-.vscode/
-*.swp
-*.swo
-
 # Project specific
-logs/
 temp/

@@ -1,43 +1,29 @@
-# FlyPig LINE 聊天機器人 V2.0
+# 🤖 IvyLineBot
 
-FlyPig 是一個基於 Flask 和 OpenAI 的 LINE 聊天機器人，專為「和宸清潔庇護工場」設計，用於關懷弱勢群體和公益活動。機器人具有多種人格風格，並提供完整的管理後台，讓非技術人員也能輕鬆管理和調整機器人行為。
+這是一個基於 Flask 和 OpenAI 的 LINE 聊天機器人專案，可以處理自然語言查詢並提供智能回覆。
 
-## 🌟 主要特點
+## 🌟 功能特點
 
-- 🤖 多種人格風格設定（貼心、風趣、認真、專業）
-- 🧠 整合 OpenAI 的 GPT-4o 大型語言模型
-- 📊 管理後台含使用數據統計和消息歷史查詢
-- 🛠️ 可自定義機器人的回應風格和提示詞
-- 🔒 安全的用戶管理和訪問控制
-- 🌐 支持繁體中文界面和互動
-- 📚 知識庫整合 (RAG) 和網路搜尋功能
+- 基於 OpenAI API 的自然語言處理
+- 整合 LINE Messaging API 實現即時對話
+- 自定義知識庫擴展回答能力
+- 用戶管理和身份驗證功能
+- 支援 Google Colab 一鍵部署
 
-## 🔧 技術架構
+## 📋 系統需求
 
-- **後端**：Flask (Python)
-- **數據庫**：SQLite / PostgreSQL
-- **AI**：OpenAI GPT-4o
-- **消息平台**：LINE Messaging API
-- **前端**：Bootstrap + Jinja2 模板
-- **向量搜索**：FAISS (Facebook AI Similarity Search)
-- **Web 搜索**：SerpAPI 整合
+- Python 3.8+
+- Flask 和相關套件
+- OpenAI API 金鑰
+- LINE 開發者帳號與頻道設定
+- SQLite 或其他支援的數據庫
 
-## 📋 安裝與設置
+## 🛠️ 安裝設定
 
-### 前置需求
-
-- Python 3.9+
-- OpenAI API 密鑰
-- LINE Developers 帳戶和頻道設定
-- SerpAPI 密鑰 (選用，用於網路搜尋功能)
-- 足夠的記憶體用於向量搜索（推薦至少 1GB RAM）
-
-### 安裝步驟
-
-1. 克隆此存儲庫：
+1. 複製存儲庫：
    ```bash
-   git clone https://github.com/yourusername/flypig-line-bot.git
-   cd flypig-line-bot
+   git clone https://github.com/YOUR_USERNAME/IvyLineBot.git
+   cd IvyLineBot
    ```
 
 2. 安裝依賴：
@@ -45,139 +31,82 @@ FlyPig 是一個基於 Flask 和 OpenAI 的 LINE 聊天機器人，專為「和�
    pip install -r requirements.txt
    ```
 
-3. 設置環境變量 (或創建 `.env` 文件)：
+3. 配置環境變數：
+   - 創建 `.env` 文件並設定必要的環境變數
    ```
-   OPENAI_API_KEY=your_openai_api_key
-   SESSION_SECRET=your_session_secret_key
+   OPENAI_API_KEY=您的OpenAI_API金鑰
+   LINE_CHANNEL_SECRET=您的LINE頻道密鑰
+   LINE_CHANNEL_ACCESS_TOKEN=您的LINE頻道訪問令牌
+   DATABASE_URL=sqlite:///instance/flypig.db
+   SESSION_SECRET=您的會話密鑰
    ```
 
-4. 啟動服務：
+4. 初始化數據庫：
    ```bash
-   python main.py
+   python init_db.py
    ```
-   
-5. 訪問管理後台：
+
+5. 運行應用：
+   ```bash
+   python app.py
    ```
-   http://localhost:5000
-   ```
-   預設管理員帳號：admin / 密碼：admin
 
-## 🔄 自定義為其他 LINE BOT 角色
+## 🚀 在 Google Colab 上部署
 
-若要將此機器人調整為其他角色，您需要修改以下設定：
+我們提供了簡便的 Google Colab 部署方案：
 
-### 1. 機器人人格設定
+1. 訪問 [IvyLineBot Colab 筆記本](https://colab.research.google.com/github/YOUR_USERNAME/IvyLineBot/blob/main/IvyLineBot_Colab.ipynb)
+2. 按照筆記本中的指示操作
+3. 獲取公共 URL 並設置到 LINE 開發者控制台
 
-在管理後台的「機器人風格」頁面中，您可以修改或新增風格。預設有四種風格：
-
-- **貼心**（默認）：關懷輔導型
-- **風趣**：幽默風趣型
-- **認真**：正式商務型
-- **專業**：技術專家型
-
-每種風格都有對應的「系統提示詞」(System Prompt)，定義了機器人的行為和語調。您可以根據需要修改這些提示詞，或創建新的風格。
-
-### 2. 修改程式碼中的預設值
-
-如果要完全更換角色設定，請修改以下檔案：
-
-#### main.py 
-
-找到 `default_styles` 部分（約第 215 行），修改風格名稱和提示詞：
-
-```python
-default_styles = [
-    BotStyle(name="[新風格名]", prompt="[新角色描述]", is_default=True),
-    # ... 其他風格
-]
-```
-
-#### services/llm_service.py
-
-在 `get_bot_style` 方法中，更新預設風格的設定（約第 30-45 行）。
-
-### 3. LINE 平台設定
-
-1. 登入 [LINE Developers Console](https://developers.line.biz/)
-2. 創建一個新的 Provider（若還沒有）
-3. 創建一個 Messaging API 頻道
-4. 獲取頻道 ID、頻道密鑰和頻道訪問令牌
-5. 在 Webhook URL 欄位設置您的 webhook URL：`https://您的網域/webhook`
-6. 在管理後台的「LINE機器人設定」頁面中填入以上資訊
-
-### 4. OpenAI API 設定
-
-在管理後台的「LLM 設定」頁面中，填入您的 OpenAI API 密鑰。您也可以調整溫度和最大生成令牌數，以控制回應的創意性和長度。
-
-### 5. 知識庫與網路搜尋功能
-
-#### 知識庫 (RAG) 功能
-機器人支援 Retrieval Augmented Generation (RAG) 功能，可將自定義的知識文件加入系統，使機器人能夠回答特定領域的問題：
-
-1. 在管理後台的「知識庫」頁面中，上傳 TXT、PDF、DOCX 或 MD 格式的文件
-2. 系統會自動處理文件並建立向量索引
-3. 啟用 RAG 功能後，機器人回答用戶問題時會參考相關知識
-4. 您可以隨時更新、刪除或重建知識庫
-
-#### 網路搜尋功能
-機器人支援實時網路搜尋功能，能夠為用戶提供最新的網路資訊：
-
-1. 在「機器人設定」頁面啟用網路搜尋功能
-2. 填入 SerpAPI 密鑰（需要先註冊 [SerpAPI](https://serpapi.com/) 獲取）
-3. 啟用後，機器人會在適當的時機使用網路搜尋來補充回答
-
-## 📄 自訂檔案說明
-
-- **main.py**: 主程式入口，包含基本路由和模型定義
-- **services/llm_service.py**: OpenAI 服務和機器人風格處理
-- **routes/**: 路由和 API 處理（admin.py, auth.py, webhook.py）
-- **rag_service.py**: 知識庫和向量搜索實現
-- **web_search_service.py**: 網路搜尋服務實現
-- **static/**: CSS、JS 和其他靜態文件
-- **templates/**: HTML 模板文件
-- **models.py**: 數據庫模型定義
-
-## 🔐 資安考量
-
-- 密碼存儲使用 Werkzeug 的 `generate_password_hash` 和 `check_password_hash`
-- API 密鑰存儲在數據庫中，並使用環境變量作為優先
-- 所有表單請求包含 CSRF 防護
-- 敏感操作需要管理員權限
-
-## 📜 授權條款
-
-本項目採用 MIT 授權條款。請遵守 OpenAI 和 LINE 的服務條款。
+## 🔧 專案結構
 
 ```
-MIT License
-
-Copyright (c) 2025 FlyPig AI
-
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this software and associated documentation files (the "Software"), to deal
-in the Software without restriction, including without limitation the rights
-to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
-copies of the Software, and to permit persons to whom the Software is
-furnished to do so, subject to the following conditions:
-
-The above copyright notice and this permission notice shall be included in all
-copies or substantial portions of the Software.
-
-THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
-AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
-SOFTWARE.
+IvyLineBot/
+├── app.py                  # 應用程式入口點
+├── init_db.py              # 數據庫初始化腳本
+├── colab_deploy.py         # Google Colab 部署腳本
+├── requirements.txt        # 專案依賴
+├── config.py               # 配置設定
+├── models/                 # 數據模型
+│   ├── __init__.py
+│   ├── user.py
+│   └── chat_history.py
+├── routes/                 # 應用路由
+│   ├── __init__.py
+│   ├── admin.py
+│   ├── auth.py
+│   └── api.py
+├── services/               # 業務邏輯層
+│   ├── __init__.py
+│   ├── line_service.py
+│   └── openai_service.py
+├── knowledge_base/         # 知識庫文件
+└── instance/               # 實例文件（數據庫等）
 ```
 
-## 👥 貢獻與支持
+## 📝 使用方法
 
-如果您有任何問題或建議，請提交 Issue 或 Pull Request。
+1. 設置 LINE Bot 的 Webhook URL 為您的應用程式 URL + `/callback`
+2. 在 LINE Developers 控制台啟用 Webhook
+3. 將機器人添加為好友並開始對話
 
----
+## 🤝 貢獻指南
 
-開發者：FlyPig AI  
-版本：2.0.0  
-最後更新：2025年3月6日
+歡迎提交問題報告和貢獻代碼！請遵循以下步驟：
+
+1. Fork 專案
+2. 創建您的功能分支 (`git checkout -b feature/amazing-feature`)
+3. 提交您的更改 (`git commit -m '添加一些驚人的功能'`)
+4. 推送到分支 (`git push origin feature/amazing-feature`)
+5. 開啟一個 Pull Request
+
+## 📄 授權協議
+
+本專案採用 MIT 授權協議 - 詳情參見 [LICENSE](LICENSE) 文件。
+
+## 🙏 鳴謝
+
+- [Flask](https://flask.palletsprojects.com/)
+- [LINE Messaging API](https://developers.line.biz/en/services/messaging-api/)
+- [OpenAI API](https://openai.com/blog/openai-api/)

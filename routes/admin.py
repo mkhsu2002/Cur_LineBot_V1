@@ -9,7 +9,7 @@ from forms import LLMSettingsForm, BotStyleForm, BotSettingsForm, DocumentForm, 
 from routes.utils.config_service import ConfigManager
 
 # 創建藍圖但不直接導入可能導致循環引用的模塊
-admin_bp = Blueprint('admin', __name__)
+admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 logger = logging.getLogger(__name__)
 
 # 使用延遲導入避免循環引用問題
@@ -59,39 +59,12 @@ def admin_required(f):
 @admin_bp.route('/dashboard')
 @admin_required
 def dashboard():
-    """Admin dashboard displaying system overview"""
-    # 獲取數據庫會話和模型
-    BotStyle, LineUser, ChatMessage, _, Document = get_models()
+    """管理面板首頁"""
+    if not current_user.is_admin:
+        flash('您沒有權限訪問管理面板。', 'danger')
+        return redirect(url_for('index'))
     
-    # Get stats
-    user_count = LineUser.query.count()
-    message_count = ChatMessage.query.count()
-    document_count = Document.query.count()
-    
-    # Get recent messages
-    recent_messages = ChatMessage.query.order_by(ChatMessage.timestamp.desc()).limit(10).all()
-    
-    # Get active style
-    active_style_name = ConfigManager.get("ACTIVE_BOT_STYLE", "Default")
-    active_style = BotStyle.query.filter_by(name=active_style_name).first()
-    
-    # Get OpenAI API key status
-    openai_key = ConfigManager.get("OPENAI_API_KEY", "")
-    api_status = "Configured" if openai_key else "Not Configured"
-    
-    # Get RAG status
-    rag_enabled = ConfigManager.get("RAG_ENABLED", "True") == "True"
-    
-    return render_template(
-        'dashboard.html',
-        user_count=user_count,
-        message_count=message_count,
-        document_count=document_count,
-        recent_messages=recent_messages,
-        active_style=active_style,
-        api_status=api_status,
-        rag_enabled=rag_enabled
-    )
+    return render_template('admin/dashboard.html')
 
 # LLM Settings
 @admin_bp.route('/llm_settings', methods=['GET', 'POST'])
@@ -178,18 +151,22 @@ def bot_settings():
     )
 
 # Bot Styles
-@admin_bp.route('/bot_styles')
+@admin_bp.route('/bot-styles')
 @admin_required
 def bot_styles():
-    """Bot styles management page"""
+    """機器人風格管理頁面"""
+    if not current_user.is_admin:
+        flash('您沒有權限訪問此頁面。', 'danger')
+        return redirect(url_for('index'))
+    
     # 獲取數據庫會話和模型
     BotStyle, _, _, _, _ = get_models()
     
     styles = BotStyle.query.all()
     form = BotStyleForm()
-    return render_template('bot_styles.html', styles=styles, form=form)
+    return render_template('admin/bot_styles.html', styles=styles, form=form)
 
-@admin_bp.route('/bot_styles/add', methods=['POST'])
+@admin_bp.route('/bot-styles/add', methods=['POST'])
 @admin_required
 def add_bot_style():
     """Add a new bot style"""
@@ -200,7 +177,7 @@ def add_bot_style():
         existing = BotStyle.query.filter_by(name=form.name.data).first()
         if existing:
             flash(f'A style with name "{form.name.data}" already exists.', 'danger')
-            return redirect(url_for('admin.bot_styles'))
+            return redirect(url_for('admin.bot-styles'))
         
         # Create new style
         style = BotStyle(
@@ -226,9 +203,9 @@ def add_bot_style():
             for error in errors:
                 flash(f'{field}: {error}', 'danger')
     
-    return redirect(url_for('admin.bot_styles'))
+    return redirect(url_for('admin.bot-styles'))
 
-@admin_bp.route('/bot_styles/edit/<int:style_id>', methods=['POST'])
+@admin_bp.route('/bot-styles/edit/<int:style_id>', methods=['POST'])
 @admin_required
 def edit_bot_style(style_id):
     """Edit an existing bot style"""
@@ -245,7 +222,7 @@ def edit_bot_style(style_id):
             existing = BotStyle.query.filter_by(name=form.name.data).first()
             if existing:
                 flash(f'A style with name "{form.name.data}" already exists.', 'danger')
-                return redirect(url_for('admin.bot_styles'))
+                return redirect(url_for('admin.bot-styles'))
         
         # Update style
         style.name = form.name.data
@@ -269,9 +246,9 @@ def edit_bot_style(style_id):
             for error in errors:
                 flash(f'{field}: {error}', 'danger')
     
-    return redirect(url_for('admin.bot_styles'))
+    return redirect(url_for('admin.bot-styles'))
 
-@admin_bp.route('/bot_styles/delete/<int:style_id>', methods=['POST'])
+@admin_bp.route('/bot-styles/delete/<int:style_id>', methods=['POST'])
 @admin_required
 def delete_bot_style(style_id):
     """Delete a bot style"""
@@ -284,7 +261,7 @@ def delete_bot_style(style_id):
     # Don't allow deleting the default style
     if style.is_default:
         flash('Cannot delete the default style.', 'danger')
-        return redirect(url_for('admin.bot_styles'))
+        return redirect(url_for('admin.bot-styles'))
     
     # Check if this is the active style
     if ConfigManager.get("ACTIVE_BOT_STYLE") == style.name:
@@ -304,9 +281,9 @@ def delete_bot_style(style_id):
     db.session.commit()
     
     flash(f'Style "{style_name}" deleted successfully.', 'success')
-    return redirect(url_for('admin.bot_styles'))
+    return redirect(url_for('admin.bot-styles'))
 
-@admin_bp.route('/bot_styles/get/<int:style_id>')
+@admin_bp.route('/bot-styles/get/<int:style_id>')
 @admin_required
 def get_bot_style(style_id):
     """Get a bot style as JSON for editing"""
@@ -641,155 +618,41 @@ def export_knowledge_base():
     return response
 
 # User Management
-@admin_bp.route('/user_management')
+@admin_bp.route('/users')
 @admin_required
-def user_management():
-    """User management page for admin panel users"""
-    # 獲取數據庫會話和模型
-    db = get_db()
-    User, _, _, _, _ = get_models()
+def users():
+    """使用者管理頁面"""
+    if not current_user.is_admin:
+        flash('您沒有權限訪問此頁面。', 'danger')
+        return redirect(url_for('index'))
     
-    users = db.session.query(User).all()
-    form = UserForm()
-    return render_template('user_management.html', users=users, form=form)
+    from models import User
+    users = User.query.all()
+    return render_template('admin/users.html', users=users)
 
-@admin_bp.route('/user_management/add', methods=['POST'])
+@admin_bp.route('/line-users')
 @admin_required
-def add_user():
-    """Add a new admin panel user"""
-    # 獲取數據庫會話和模型
-    db = get_db()
-    User, _, _, _, _ = get_models()
+def line_users():
+    """LINE 使用者管理頁面"""
+    if not current_user.is_admin:
+        flash('您沒有權限訪問此頁面。', 'danger')
+        return redirect(url_for('index'))
     
-    form = UserForm()
-    
-    if form.validate_on_submit():
-        # Check if username or email already exists
-        if db.session.query(User).filter_by(username=form.username.data).first():
-            flash(f'Username "{form.username.data}" is already taken.', 'danger')
-            return redirect(url_for('admin.user_management'))
-        
-        if db.session.query(User).filter_by(email=form.email.data).first():
-            flash(f'Email "{form.email.data}" is already registered.', 'danger')
-            return redirect(url_for('admin.user_management'))
-        
-        # Check for password
-        if not form.password.data:
-            flash('Password is required for new users.', 'danger')
-            return redirect(url_for('admin.user_management'))
-        
-        # Create new user
-        from werkzeug.security import generate_password_hash
-        user = User(
-            username=form.username.data,
-            email=form.email.data,
-            password_hash=generate_password_hash(form.password.data),
-            is_admin=form.is_admin.data
-        )
-        
-        db.session.add(user)
-        db.session.commit()
-        
-        flash(f'User "{form.username.data}" added successfully.', 'success')
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f'{field}: {error}', 'danger')
-    
-    return redirect(url_for('admin.user_management'))
+    from models import LineUser
+    line_users = LineUser.query.all()
+    return render_template('admin/line_users.html', line_users=line_users)
 
-@admin_bp.route('/user_management/edit/<int:user_id>', methods=['POST'])
+@admin_bp.route('/config')
 @admin_required
-def edit_user(user_id):
-    """Edit an existing admin panel user"""
-    # 獲取數據庫會話和模型
-    db = get_db()
-    User, _, _, _, _ = get_models()
+def config():
+    """系統配置頁面"""
+    if not current_user.is_admin:
+        flash('您沒有權限訪問此頁面。', 'danger')
+        return redirect(url_for('index'))
     
-    user = db.session.query(User).get_or_404(user_id)
-    form = UserForm()
-    
-    # Don't allow non-admin to edit the last admin
-    if user.is_admin and not form.is_admin.data:
-        admin_count = db.session.query(User).filter_by(is_admin=True).count()
-        if admin_count <= 1:
-            flash('Cannot remove admin status from the last admin user.', 'danger')
-            return redirect(url_for('admin.user_management'))
-    
-    if form.validate_on_submit():
-        # Check username and email uniqueness if changed
-        if form.username.data != user.username and db.session.query(User).filter_by(username=form.username.data).first():
-            flash(f'Username "{form.username.data}" is already taken.', 'danger')
-            return redirect(url_for('admin.user_management'))
-        
-        if form.email.data != user.email and db.session.query(User).filter_by(email=form.email.data).first():
-            flash(f'Email "{form.email.data}" is already registered.', 'danger')
-            return redirect(url_for('admin.user_management'))
-        
-        # Update user
-        user.username = form.username.data
-        user.email = form.email.data
-        user.is_admin = form.is_admin.data
-        
-        # Update password if provided
-        if form.password.data:
-            from werkzeug.security import generate_password_hash
-            user.password_hash = generate_password_hash(form.password.data)
-        
-        db.session.commit()
-        
-        flash(f'User "{form.username.data}" updated successfully.', 'success')
-    else:
-        for field, errors in form.errors.items():
-            for error in errors:
-                flash(f'{field}: {error}', 'danger')
-    
-    return redirect(url_for('admin.user_management'))
-
-@admin_bp.route('/user_management/delete/<int:user_id>', methods=['POST'])
-@admin_required
-def delete_user(user_id):
-    """Delete an admin panel user"""
-    # 獲取數據庫會話和模型
-    db = get_db()
-    User, _, _, _, _ = get_models()
-    
-    user = db.session.query(User).get_or_404(user_id)
-    
-    # Don't allow deleting the last admin
-    if user.is_admin:
-        admin_count = db.session.query(User).filter_by(is_admin=True).count()
-        if admin_count <= 1:
-            flash('Cannot delete the last admin user.', 'danger')
-            return redirect(url_for('admin.user_management'))
-    
-    # Don't allow deleting self
-    if user.id == current_user.id:
-        flash('Cannot delete your own account.', 'danger')
-        return redirect(url_for('admin.user_management'))
-    
-    username = user.username
-    db.session.delete(user)
-    db.session.commit()
-    
-    flash(f'User "{username}" deleted successfully.', 'success')
-    return redirect(url_for('admin.user_management'))
-
-@admin_bp.route('/user_management/get/<int:user_id>')
-@admin_required
-def get_user(user_id):
-    """Get a user as JSON for editing"""
-    # 獲取數據庫會話和模型
-    db = get_db()
-    User, _, _, _, _ = get_models()
-    
-    user = db.session.query(User).get_or_404(user_id)
-    return jsonify({
-        'id': user.id,
-        'username': user.username,
-        'email': user.email,
-        'is_admin': user.is_admin
-    })
+    from models import Config
+    configs = Config.query.all()
+    return render_template('admin/config.html', configs=configs)
 
 # 設定匯出和匯入功能
 @admin_bp.route('/export_bot_settings')
@@ -902,16 +765,16 @@ def import_bot_styles():
     
     if 'styles_file' not in request.files:
         flash('未選擇風格檔案', 'danger')
-        return redirect(url_for('admin.bot_styles'))
+        return redirect(url_for('admin.bot-styles'))
     
     file = request.files['styles_file']
     if file.filename == '':
         flash('未選擇風格檔案', 'danger')
-        return redirect(url_for('admin.bot_styles'))
+        return redirect(url_for('admin.bot-styles'))
     
     if not file.filename.lower().endswith('.json'):
         flash('僅支援 JSON 檔案格式', 'danger')
-        return redirect(url_for('admin.bot_styles'))
+        return redirect(url_for('admin.bot-styles'))
     
     # Check if we should overwrite existing styles
     overwrite = 'overwrite_existing' in request.form
@@ -922,7 +785,7 @@ def import_bot_styles():
         
         if 'styles' not in data or not isinstance(data['styles'], list):
             flash('檔案格式無效，未找到風格資料', 'danger')
-            return redirect(url_for('admin.bot_styles'))
+            return redirect(url_for('admin.bot-styles'))
         
         styles_data = data['styles']
         imported_count = 0
@@ -983,7 +846,7 @@ def import_bot_styles():
         flash(f'匯入風格時發生錯誤: {str(e)}', 'danger')
         logger.error(f"Import bot styles error: {str(e)}")
     
-    return redirect(url_for('admin.bot_styles'))
+    return redirect(url_for('admin.bot-styles'))
 
 @admin_bp.route('/export_llm_settings')
 @admin_required

@@ -4,51 +4,39 @@ from flask_login import login_user, logout_user, login_required, current_user
 from werkzeug.security import check_password_hash
 from forms import LoginForm
 
-auth_bp = Blueprint('auth', __name__)
+# 建立藍圖
+auth_bp = Blueprint('auth', __name__, url_prefix='/auth')
 logger = logging.getLogger(__name__)
 
 @auth_bp.route('/login', methods=['GET', 'POST'])
 def login():
-    """Handle user login"""
-    # Redirect if already logged in
+    """處理登入請求"""
+    # 如果用戶已登入，重定向到管理面板
     if current_user.is_authenticated:
         return redirect(url_for('admin.dashboard'))
     
-    # Get the User model
-    from models_provider import get_model
-    User = get_model("User")
-    
-    form = LoginForm()
-    
-    if form.validate_on_submit():
-        user = User.query.filter_by(username=form.username.data).first()
+    if request.method == 'POST':
+        from models import User
         
-        if user and check_password_hash(user.password_hash, form.password.data):
-            login_user(user, remember=form.remember.data)
+        username = request.form.get('username')
+        password = request.form.get('password')
+        
+        user = User.query.filter_by(username=username).first()
+        
+        if user and check_password_hash(user.password_hash, password):
+            login_user(user)
+            flash('登入成功！', 'success')
             next_page = request.args.get('next')
-            
-            # Log successful login
-            logger.info(f"User {user.username} logged in successfully")
-            
-            flash(f'Welcome, {user.username}!', 'success')
             return redirect(next_page or url_for('admin.dashboard'))
         else:
-            # Log failed login attempt
-            logger.warning(f"Failed login attempt for username: {form.username.data}")
-            
-            flash('Login failed. Please check your username and password.', 'danger')
+            flash('登入失敗，請檢查帳號和密碼。', 'danger')
     
-    return render_template('login.html', form=form)
+    return render_template('auth/login.html')
 
 @auth_bp.route('/logout')
 @login_required
 def logout():
-    """Handle user logout"""
-    username = current_user.username
+    """處理登出請求"""
     logout_user()
-    
-    # Log logout
-    logger.info(f"User {username} logged out")
-    
-    flash('You have been logged out.', 'info')
+    flash('您已登出。', 'info')
     return redirect(url_for('auth.login'))
